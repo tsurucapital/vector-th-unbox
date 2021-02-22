@@ -128,7 +128,7 @@ derivingUnbox name argsQ toRepQ fromRepQ = do
 #endif
     let newtypeMVector = newtypeInstD' ''MVector [s, typ]
             (NormalC mvName [(lazy, ConT ''MVector `AppT` s `AppT` rep)])
-            MAYBE_KIND
+            Nothing
     let mvCon = ConE mvName
     let instanceMVector = InstanceD MAYBE_OVERLAP cxts
             (ConT ''M.MVector `AppT` ConT ''MVector `AppT` typ) $ concat
@@ -150,7 +150,7 @@ derivingUnbox name argsQ toRepQ fromRepQ = do
 
     let newtypeVector = newtypeInstD' ''Vector [typ]
             (NormalC vName [(lazy, ConT ''Vector `AppT` rep)])
-            MAYBE_KIND
+            Nothing
 
     let vCon  = ConE vName
     let instanceVector = InstanceD MAYBE_OVERLAP cxts
@@ -168,11 +168,13 @@ derivingUnbox name argsQ toRepQ fromRepQ = do
         , newtypeVector, instanceVector ]
 
 newtypeInstD' :: Name -> [Type] -> Con -> Maybe Kind -> Dec
-newtypeInstD' name args kind con = 
+newtypeInstD' name args con kind =
 #if MIN_VERSION_template_haskell(2,15,0)
-    NewtypeInstD [] Nothing (foldl AppT (ConT name) args) con kind []
+    NewtypeInstD [] Nothing (foldl AppT (ConT name) args) kind con []
+#elif MIN_VERSION_template_haskell(2,11,0)
+    NewtypeInstD [] name args kind con []
 #else
-    NewtypeInstD [] name args con kind []
+    NewtypeInstD [] name args con []
 #endif
 
 #undef __GLASGOW_HASKELL__

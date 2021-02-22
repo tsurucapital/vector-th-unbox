@@ -147,7 +147,8 @@ derivingUnbox name argsQ toRepQ fromRepQ = do
             , wrap 'M.basicUnsafeMove       [mv, mv']   id
             , wrap 'M.basicUnsafeGrow       [mv, n]     (liftE mvCon) ]
 
-    let newtypeVector = NewtypeInstD [] ''Vector [typ] MAYBE_KIND
+    let newtypeVector = 
+            NewtypeInstD [] ''Vector [typ] MAYBE_KIND
             (NormalC vName [(lazy, ConT ''Vector `AppT` rep)]) []
     let vCon  = ConE vName
     let instanceVector = InstanceD MAYBE_OVERLAP cxts

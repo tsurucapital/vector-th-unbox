@@ -1,0 +1,16 @@
+-- TODO: Remove this file when the migration is complete
+
+packages: .
+
+-- TODO: Remove the below vendored packages when they have migrated to GHC 9.2
+
+source-repository-package
+  type: git
+  location: https://github.com/haskell/primitive
+  tag: 1704f59d91ef964f83c120af4974251d50c2eb68
+
+source-repository-package
+  type: git
+  location: https://github.com/awjchen/vector
+  tag: fb6f584abff163a361563a98a7760c563f7a6832
+  subdir: vector

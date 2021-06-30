@@ -56,9 +56,15 @@ common name = do
     let vName = mkName ("V_" ++ name)
     i <- newPatExp "idx"
     n <- newPatExp "len"
+#if MIN_VERSION_template_haskell(2,18,0)
+    mv  <- first (ConP mvName [] . (:[])) <$> newPatExp "mvec"
+    mv' <- first (ConP mvName [] . (:[])) <$> newPatExp "mvec'"
+    v   <- first (ConP vName  [] . (:[])) <$> newPatExp "vec"
+#else
     mv  <- first (ConP mvName . (:[])) <$> newPatExp "mvec"
     mv' <- first (ConP mvName . (:[])) <$> newPatExp "mvec'"
     v   <- first (ConP vName  . (:[])) <$> newPatExp "vec"
+#endif
     return Common {..}
 
 -- Turn any 'Name' into a capturable one.

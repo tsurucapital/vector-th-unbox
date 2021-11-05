@@ -1,14 +1,8 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RecordWildCards #-}
-#if __GLASGOW_HASKELL__ >= 800
 {-# LANGUAGE TemplateHaskellQuotes #-}
-#else
-{-# LANGUAGE TemplateHaskell #-}
-#endif
-#if __GLASGOW_HASKELL__ >= 702
 {-# LANGUAGE Trustworthy #-}
-#endif
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS -Wall #-}
@@ -27,9 +21,6 @@ module Data.Vector.Unboxed.Deriving
       derivingUnbox
     ) where
 
-#if !MIN_VERSION_base(4,8,0)
-import Control.Applicative
-#endif
 import Control.Arrow
 import Control.Monad
 import Data.Char (isAlphaNum)
@@ -67,14 +58,6 @@ common name = do
 #endif
                              pats
 
--- Turn any 'Name' into a capturable one.
-capture :: Name -> Name
-#if __GLASGOW_HASKELL__ == 704
-capture = mkName . nameBase
-#else
-capture = id
-#endif
-
 liftE :: Exp -> Exp -> Exp
 liftE e = InfixE (Just e) (VarE 'liftM) . Just
 
@@ -83,14 +66,9 @@ liftE e = InfixE (Just e) (VarE 'liftM) . Just
 -- A final coercion (@Exp → Exp@) is applied to the body of the function.
 -- Complimentary @INLINE@ pragma included.
 wrap :: Name -> [(Pat, Exp)] -> (Exp -> Exp) -> [Dec]
-wrap fun (unzip -> (pats, exps)) coerce = [inline, method] where
-    name = capture fun
-#if MIN_VERSION_template_haskell(2,8,0)
+wrap name (unzip -> (pats, exps)) coerce = [inline, method] where
     inline = PragmaD (InlineP name Inline FunLike AllPhases)
-#else
-    inline = PragmaD ( InlineP name (InlineSpec True False Nothing) )
-#endif
-    body = coerce $ foldl AppE (VarE fun) exps
+    body = coerce $ foldl AppE (VarE name) exps
     method = FunD name [Clause pats (NormalB body) []]
 
 {-| Let's consider a more complex example: suppose we want an @Unbox@
@@ -123,17 +101,11 @@ derivingUnbox name argsQ toRepQ fromRepQ = do
         _ -> fail "Expecting a type of the form: cxts => typ -> rep"
 
     let s = VarT (mkName "s")
-#if MIN_VERSION_template_haskell(2,11,0)
     let lazy = Bang NoSourceUnpackedness NoSourceStrictness
-# define MAYBE_OVERLAP Nothing
-#else
-    let lazy = NotStrict
-# define MAYBE_OVERLAP
-#endif
     let newtypeMVector = newtypeInstD' ''MVector [s, typ]
             (NormalC mvName [(lazy, ConT ''MVector `AppT` s `AppT` rep)])
     let mvCon = ConE mvName
-    let instanceMVector = InstanceD MAYBE_OVERLAP cxts
+    let instanceMVector = InstanceD Nothing cxts
             (ConT ''M.MVector `AppT` ConT ''MVector `AppT` typ) $ concat
             [ wrap 'M.basicLength           [mv]        id
             , wrap 'M.basicUnsafeSlice      [i, n, mv]  (AppE mvCon)
@@ -155,7 +127,7 @@ derivingUnbox name argsQ toRepQ fromRepQ = do
             (NormalC vName [(lazy, ConT ''Vector `AppT` rep)])
 
     let vCon  = ConE vName
-    let instanceVector = InstanceD MAYBE_OVERLAP cxts
+    let instanceVector = InstanceD Nothing cxts
             (ConT ''G.Vector `AppT` ConT ''Vector `AppT` typ) $ concat
             [ wrap 'G.basicUnsafeFreeze     [mv]        (liftE vCon)
             , wrap 'G.basicUnsafeThaw       [v]         (liftE mvCon)
@@ -165,7 +137,7 @@ derivingUnbox name argsQ toRepQ fromRepQ = do
             , wrap 'G.basicUnsafeCopy       [mv, v]     id
             , wrap 'G.elemseq               [v, a]      id ]
 
-    return [ InstanceD MAYBE_OVERLAP cxts (ConT ''Unbox `AppT` typ) []
+    return [ InstanceD Nothing cxts (ConT ''Unbox `AppT` typ) []
         , newtypeMVector, instanceMVector
         , newtypeVector, instanceVector ]
 
@@ -173,13 +145,10 @@ newtypeInstD' :: Name -> [Type] -> Con -> Dec
 newtypeInstD' name args con =
 #if MIN_VERSION_template_haskell(2,15,0)
     NewtypeInstD [] Nothing (foldl AppT (ConT name) args) Nothing con []
-#elif MIN_VERSION_template_haskell(2,11,0)
-    NewtypeInstD [] name args Nothing con []
 #else
-    NewtypeInstD [] name args con []
+    NewtypeInstD [] name args Nothing con []
 #endif
 
-#undef __GLASGOW_HASKELL__
 {-$usage
 
 Writing @Unbox@ instances for new data types is tedious and formulaic. More

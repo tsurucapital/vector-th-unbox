@@ -34,8 +34,8 @@ library
         Data.Vector.Unboxed.Deriving
 
     build-depends:
-        base >= 4.5 && < 4.16,
-        template-haskell >= 2.5 && <2.18,
+        base >= 4.5 && < 4.17,
+        template-haskell >= 2.5 && <2.19,
         vector >= 0.7.1 && <0.13
 
 test-suite sanity

@@ -56,10 +56,16 @@ common name = do
     let vName = mkName ("V_" ++ name)
     i <- newPatExp "idx"
     n <- newPatExp "len"
-    mv  <- first (ConP mvName . (:[])) <$> newPatExp "mvec"
-    mv' <- first (ConP mvName . (:[])) <$> newPatExp "mvec'"
-    v   <- first (ConP vName  . (:[])) <$> newPatExp "vec"
+    mv  <- first (conPCompat mvName . (:[])) <$> newPatExp "mvec"
+    mv' <- first (conPCompat mvName . (:[])) <$> newPatExp "mvec'"
+    v   <- first (conPCompat vName  . (:[])) <$> newPatExp "vec"
     return Common {..}
+  where
+    conPCompat n pats = ConP n
+#if MIN_VERSION_template_haskell(2,18,0)
+                             []
+#endif
+                             pats
 
 -- Turn any 'Name' into a capturable one.
 capture :: Name -> Name
@@ -164,7 +170,7 @@ derivingUnbox name argsQ toRepQ fromRepQ = do
         , newtypeVector, instanceVector ]
 
 newtypeInstD' :: Name -> [Type] -> Con -> Dec
-newtypeInstD' name args con = 
+newtypeInstD' name args con =
 #if MIN_VERSION_template_haskell(2,15,0)
     NewtypeInstD [] Nothing (foldl AppT (ConT name) args) Nothing con []
 #elif MIN_VERSION_template_haskell(2,11,0)
